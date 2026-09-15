@@ -48,7 +48,7 @@
   --r-sm:.25rem; --r-md:.5rem; --r-lg:1rem; --r-pill:100vw; --hairline:.0625rem;
   --shadow-card:0 2px 2px #00000003, 0 4px 4px #00000005, 0 16px 24px #0000000a;
 
-  --measure:44rem; --container:60rem;
+  --measure:50rem; --container:60rem;
   --page-margin:clamp(1.5rem, 1.08rem + 3.92vw, 4rem);
 }
 
@@ -110,9 +110,9 @@ img{max-width:100%}
   .wrap{
     display:grid;
     grid-template-columns:15rem minmax(0,1fr);
-    column-gap:3.5rem;
+    column-gap:4rem;
     align-items:start;
-    max-width:82rem;
+    max-width:none;
   }
   .masthead{grid-column:1 / -1;max-width:none}
   .rail{grid-column:1;grid-row:2 / span 999;position:sticky;top:2.5rem;max-width:none}
