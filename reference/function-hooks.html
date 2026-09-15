@@ -220,6 +220,33 @@ index, so the noun is typed on the dependent's <code>$</code> automatically.</p>
 </table>
 </div>
 
+<h2><code>tool.call</code></h2>
+
+<p><span class="tag tag--verified">verified</span> Read out of
+<code>claude-code.d.ts</code> as <code>/plugin-types</code> generated it from
+2.1.272. The event is the tool's own arguments <strong>spread flat</strong>
+beside two reserved fields, not nested under <code>input</code>:</p>
+
+<pre><code>e = {
+  tool: "Bash",           // reserved: a rewrite is ignored by core
+  tool_use_id: "toolu_",  // reserved: same id at every event of the call
+  agentId?: string,       // absent on the main loop; pinned
+  ...the tool's arguments // Bash: command, timeout?, description?, ...
+}</code></pre>
+
+<p>A hook returns <code>{ deny: string }</code> to refuse (the model reads the
+string as an error result) or <code>{ result, context? }</code> to answer the
+call itself. Anything else is refused with
+<code>returned the wrong shape (neither { result } nor { deny })</code> and the
+hook is skipped, so the call proceeds unguarded.</p>
+
+<p><code>next(e)</code> resolves to core's fuller object,
+<code>{ ref, result, text }</code> plus <code>isError: true</code> when the tool
+reported an error. <code>ref</code>, <code>text</code> and <code>isError</code>
+are core's to set: a hook cannot fabricate an error result, it can only
+<code>deny</code>. Returning the object <code>next</code> gave you unchanged
+makes core reuse its own messages verbatim.</p>
+
 <h2>Still unverified</h2>
 
 <p><span class="tag tag--unverified">unverified</span> Carried from secondhand
@@ -227,8 +254,6 @@ sources and not confirmed on this machine. Do not build on these without
 checking.</p>
 
 <ul>
-<li>The exact input fields of any event, including <code>tool.call</code>'s.</li>
-<li>The shape a <code>tool.call</code> hook returns to deny a call.</li>
 <li>How an administrator actually withholds a noun on <code>$</code> from an installed third-party mod. The mechanism is described in the proposal, not in reference documentation, and it is the load-bearing question for shipping mods to a team.</li>
 <li>Ship date, marketplace, and whether an organisation can pin or block a mod.</li>
 </ul>

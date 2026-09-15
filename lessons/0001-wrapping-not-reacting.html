@@ -159,10 +159,7 @@ never read.</p>
 
     // Answer for ourselves: never call next, so the engine never runs it.
     if (/git\s+push\b.*(--force|-f)\b/.test(command)) {
-      return {
-        output: "Refused by my-guardrail: force push. Use --force-with-lease.",
-        isError: true,
-      };
+      return { deny: "Refused by my-guardrail: force push. Use --force-with-lease." };
     }
 
     // Wrap: hold the result, annotate it, hand it back up.
@@ -178,14 +175,48 @@ never read.</p>
 on the input <em>and</em> records something about the result, sharing the
 <code>command</code> variable across both moments.</p>
 
+<h2>What <code>e</code> is, and what you return</h2>
+
+<p>A <code>tool.call</code> event is the tool's own arguments <strong>spread flat</strong>
+next to two reserved fields, not nested under an <code>input</code> key. For
+<code>Bash</code> that is:</p>
+
+<pre><code>{
+  tool: "Bash",          // reserved: rewriting it is ignored
+  tool_use_id: "toolu_",  // reserved: the same id at every event of this call
+  agentId?: "...",        // absent on the main loop; pinned, cannot be changed
+  command: "git push --force",
+  timeout?: number,
+  description?: string,
+  run_in_background?: boolean,
+}</code></pre>
+
+<p>So <code>e.command</code> is right. The <em>return</em> is where the shape is
+not what a shell hook trains you to expect. There is no
+<code>isError</code> you can set. A hook returns one of two things:</p>
+
+<div class="table-scroll">
+<table>
+<thead><tr><th>Return</th><th>Meaning</th></tr></thead>
+<tbody>
+<tr><td><code>{ deny: string }</code></td><td>Refuse the call. The model receives your string as an error result.</td></tr>
+<tr><td><code>{ result, context? }</code></td><td>Answer the call yourself. Core validates <code>result</code> against the tool's output schema, and <code>context</code> is a reminder the model reads and the user never sees.</td></tr>
+</tbody>
+</table>
+</div>
+
+<p>What <code>next(e)</code> resolves to is the richer object core builds:
+<code>{ ref, result, text }</code>, plus <code>isError: true</code> when the tool
+reported one. <code>ref</code>, <code>text</code> and <code>isError</code> are
+core's to set, never yours; returning the object you got back unchanged makes
+core reuse its messages verbatim.</p>
+
 <div class="callout callout--warn">
-<h4>The one thing in this file I could not verify</h4>
-<p>The field names on <code>e</code> for <code>tool.call</code>
-(<code>e.command</code>) and the shape of the object you return
-(<code>output</code>, <code>isError</code>) are my best reading, not a checked
-fact. The engine's own types are the authority and they move between releases.
-Confirming them is step 3 of the exercise below, and treating a plausible-looking
-field name as true is the main way people lose an afternoon here.</p>
+<p><strong>Where these came from.</strong> Every field above is read out of
+<code>claude-code.d.ts</code> as <code>/plugin-types</code> generated it from
+build 2.1.272, not inferred. That file is the only authority, it is generated
+from the build you are running, and the API is early access, so regenerate it
+after an update rather than trusting this table.</p>
 </div>
 
 <h2>Run it</h2>
@@ -224,7 +255,7 @@ you.</p>
 <ol>
 <li>Build the three files above, in that layout, and run <code>claude plugin validate ./my-guardrail</code> until it prints the <code>Validating hooks:</code> block.</li>
 <li>Load it with the command above and try <code>git push --force</code> on a scratch repo. Confirm the refusal text appears and the push never happens.</li>
-<li>Run <code>/plugin-types</code> in that session. It writes <code>claude-code.d.ts</code> into <code>.claude/types</code>. Open it, find the <code>tool.call</code> event, and <strong>correct my guesses</strong> about <code>e.command</code> and the return shape.</li>
+<li>Run <code>/plugin-types</code> in that session and open <code>.claude/types/claude-code.d.ts</code>. Find <code>ToolCallResult</code> and read the third variant, the one carrying <code>isError</code>. Work out from the doc comments why a hook cannot return it.</li>
 <li>Add one thing the shell version could not do: use the result you got back from <code>next(e)</code> to change what the model is told.</li>
 </ol>
 

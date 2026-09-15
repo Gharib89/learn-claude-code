@@ -4,10 +4,7 @@ export function register(on) {
 
     // Answer for ourselves: never call next, so the engine never runs it.
     if (/git\s+push\b.*(--force|-f)\b/.test(command)) {
-      return {
-        output: "Refused by my-guardrail: force push. Use --force-with-lease.",
-        isError: true,
-      };
+      return { deny: "Refused by my-guardrail: force push. Use --force-with-lease." };
     }
 
     // Wrap: hold the result, annotate it, hand it back up.
