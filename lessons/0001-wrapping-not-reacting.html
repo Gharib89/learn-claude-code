@@ -30,34 +30,72 @@ middle of the operation and owns both what goes in and what comes back. That
 one structural difference is the whole feature, and porting a guardrail you
 already run is the fastest way to feel it.</p>
 
-<div class="shapes bleed">
-  <div class="shape">
-    <h4>The shell hook you already write</h4>
-<pre>  prompt
-    &rarr; engine decides
-        &rarr; runs the tool
-            &rarr; <strong>your script sees it</strong>
-                &rarr; exit 2 to block
+<section class="eli5">
+  <p>A shell hook is a <b>security camera</b>. It sees what happened.</p>
+  <p>A function hook is a <b>doorman</b>. It decides who gets in, and it sees them leave.</p>
+  <p class="plain">Same door. Only one of them can turn someone away, and only one of them
+  knows both who arrived and what they left with.</p>
+</section>
 
-  You are downstream. You react
-  to a decision already made,
-  and the result has moved on
-  by the time you read it.</pre>
-  </div>
-  <div class="shape shape--wrap">
-    <h4>The function hook</h4>
-<pre>  prompt
-    &rarr; <strong>your hook opens</strong>
-        &rarr; next(e) &rarr; engine runs
-        &rarr; <strong>your hook closes</strong>
-            &rarr; returns the result
+<figure>
+<svg viewBox="0 0 620 380" role="img" xmlns="http://www.w3.org/2000/svg"
+     aria-label="A shell hook sits after the tool has run and is only told about it. A function hook encloses the engine's own step, so the call passes through it on the way in and the result passes back through it on the way out.">
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="currentColor"/>
+    </marker>
+    <marker id="ac" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="#d97757"/>
+    </marker>
+  </defs>
 
-  You are the wrapper. You hold
-  the input before it lands and
-  the result before anyone else
-  sees it, in one function.</pre>
-  </div>
-</div>
+  <text x="8" y="26" font-size="13" font-weight="600" fill="currentColor">Shell hook</text>
+
+  <rect x="8"   y="54" width="88"  height="44" rx="6" fill="none" stroke="currentColor"/>
+  <text x="52"  y="81" font-size="12" text-anchor="middle" fill="currentColor">prompt</text>
+  <rect x="124" y="54" width="112" height="44" rx="6" fill="none" stroke="currentColor"/>
+  <text x="180" y="81" font-size="12" text-anchor="middle" fill="currentColor">engine decides</text>
+  <rect x="264" y="54" width="92"  height="44" rx="6" fill="none" stroke="currentColor"/>
+  <text x="310" y="81" font-size="12" text-anchor="middle" fill="currentColor">tool runs</text>
+  <rect x="384" y="54" width="88"  height="44" rx="6" fill="none" stroke="currentColor"/>
+  <text x="428" y="81" font-size="12" text-anchor="middle" fill="currentColor">result</text>
+
+  <line x1="96"  y1="76" x2="120" y2="76" stroke="currentColor" marker-end="url(#a)"/>
+  <line x1="236" y1="76" x2="260" y2="76" stroke="currentColor" marker-end="url(#a)"/>
+  <line x1="356" y1="76" x2="380" y2="76" stroke="currentColor" marker-end="url(#a)"/>
+
+  <line x1="310" y1="98" x2="310" y2="130" stroke="currentColor" stroke-dasharray="4 3" marker-end="url(#a)"/>
+  <rect x="264" y="132" width="92" height="40" rx="6" fill="none" stroke="currentColor" stroke-dasharray="4 3"/>
+  <text x="310" y="157" font-size="12" text-anchor="middle" fill="currentColor">your script</text>
+  <text x="368" y="149" font-size="11" fill="currentColor">told afterwards</text>
+  <text x="368" y="165" font-size="11" fill="currentColor">nothing flows back</text>
+
+  <text x="8" y="222" font-size="13" font-weight="600" fill="currentColor">Function hook</text>
+
+  <rect x="112" y="240" width="392" height="120" rx="10" fill="none" stroke="#d97757" stroke-width="1.5"/>
+  <text x="126" y="266" font-size="12" font-weight="600" fill="#d97757">your hook</text>
+
+  <rect x="8"   y="284" width="88"  height="44" rx="6" fill="none" stroke="currentColor"/>
+  <text x="52"  y="311" font-size="12" text-anchor="middle" fill="currentColor">prompt</text>
+  <rect x="232" y="284" width="152" height="44" rx="6" fill="none" stroke="currentColor"/>
+  <text x="308" y="311" font-size="12" text-anchor="middle" fill="currentColor">engine runs the tool</text>
+  <rect x="520" y="284" width="88"  height="44" rx="6" fill="none" stroke="currentColor"/>
+  <text x="564" y="311" font-size="12" text-anchor="middle" fill="currentColor">result</text>
+
+  <line x1="96"  y1="306" x2="108" y2="306" stroke="currentColor" marker-end="url(#a)"/>
+  <line x1="136" y1="306" x2="228" y2="306" stroke="#d97757" marker-end="url(#ac)"/>
+  <text x="182" y="298" font-size="11" text-anchor="middle" fill="#d97757">next(e)</text>
+  <line x1="384" y1="306" x2="480" y2="306" stroke="#d97757" marker-end="url(#ac)"/>
+  <text x="432" y="298" font-size="11" text-anchor="middle" fill="#d97757">its result</text>
+  <line x1="508" y1="306" x2="516" y2="306" stroke="currentColor" marker-end="url(#a)"/>
+
+  <text x="126" y="350" font-size="11" fill="#d97757">one function, holding both moments</text>
+</svg>
+<figcaption>The shell hook is downstream: by the time it is told, the input is spent and
+the result has moved on. The function hook encloses the engine's step, so the call passes
+through it going in and the result passes back through it coming out. Everything the
+feature gives you follows from that enclosure.</figcaption>
+</figure>
 
 <p>If you have written Express middleware, you already have the shape. The
 payoff is not that it is tidier. It is that rewriting an input and annotating
