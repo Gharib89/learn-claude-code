@@ -1,0 +1,237 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Wrapping, not reacting &middot; Lesson 0001</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:ital,wght@0,300..900;1,300..900&family=Newsreader:ital,opsz,wght@0,6..72,200..800;1,6..72,200..800&family=JetBrains+Mono:ital,wght@0,400..700;1,400..700&display=swap">
+<link rel="stylesheet" href="../assets/claude.css">
+<link rel="stylesheet" href="../assets/quiz.css">
+</head>
+<body>
+<main class="wrap">
+
+<header class="masthead">
+  <span class="lesson-no">Lesson 0001</span>
+  <span class="spacer"></span>
+  <nav>
+    <a href="../MISSION.md">Mission</a>
+    <a href="../RESOURCES.md">Resources</a>
+    <a href="../reference/function-hooks.html">Reference</a>
+  </nav>
+</header>
+
+<h1>Wrapping, not reacting</h1>
+
+<p class="standfirst">You have written shell hooks. They watch. A function hook stands in the
+middle of the operation and owns both what goes in and what comes back. That
+one structural difference is the whole feature, and porting a guardrail you
+already run is the fastest way to feel it.</p>
+
+<div class="shapes bleed">
+  <div class="shape">
+    <h4>The shell hook you already write</h4>
+<pre>  prompt
+    &rarr; engine decides
+        &rarr; runs the tool
+            &rarr; <strong>your script sees it</strong>
+                &rarr; exit 2 to block
+
+  You are downstream. You react
+  to a decision already made,
+  and the result has moved on
+  by the time you read it.</pre>
+  </div>
+  <div class="shape shape--wrap">
+    <h4>The function hook</h4>
+<pre>  prompt
+    &rarr; <strong>your hook opens</strong>
+        &rarr; next(e) &rarr; engine runs
+        &rarr; <strong>your hook closes</strong>
+            &rarr; returns the result
+
+  You are the wrapper. You hold
+  the input before it lands and
+  the result before anyone else
+  sees it, in one function.</pre>
+  </div>
+</div>
+
+<p>If you have written Express middleware, you already have the shape. The
+payoff is not that it is tidier. It is that rewriting an input and annotating
+the result stop being two separate hooks that cannot see each other.</p>
+
+<h2>The contract</h2>
+
+<p>A mod is a plugin folder. Its hooks live in one module that
+<code>hooks/hooks.json</code> names, and that module exports
+<code>register</code>:</p>
+
+<pre><code>export function register(on, options) {
+  on(event, matcher?, hook)
+}</code></pre>
+
+<p>Every hook has the same three parameters, and the names are worth saying out
+loud because they are the mental model:</p>
+
+<div class="table-scroll">
+<table>
+<thead><tr><th>Parameter</th><th>Is</th><th>Consequence</th></tr></thead>
+<tbody>
+<tr><td><code>$</code></td><td>The engine interface: <code>display</code>, <code>model</code>, <code>session</code>, <code>prompt</code>, <code>tools</code>, <code>filesystem</code>, <code>store</code>, <code>clock</code>, <code>network</code>, <code>process</code>, <code>settings</code>, <code>environment</code></td><td>The module has <strong>no DOM and no Node</strong>. There is no <code>fs</code>, no <code>require</code>. Everything outside the module is reached through <code>$</code>, which is exactly what makes a mod restrictable.</td></tr>
+<tr><td><code>e</code></td><td>The event's input, as a plain value</td><td>Pass <code>next({ ...e, field: newValue })</code> and the rest of the chain sees your version.</td></tr>
+<tr><td><code>next</code></td><td>The continuation: the other plugins, then the engine's own behaviour</td><td><code>await next(e)</code> resolves to the result. <strong>Return without calling it and you have answered for yourself</strong>, which is how a mod denies something.</td></tr>
+</tbody>
+</table>
+</div>
+
+<h2>Port your git guardrail</h2>
+
+<p>You already block force pushes with a shell hook. Here is the same guardrail
+as a function hook, which is a deliberately small delta from what you know.</p>
+
+<p class="code-label">my-guardrail/.claude-plugin/plugin.json</p>
+<pre><code>{
+  "name": "my-guardrail",
+  "version": "0.1.0",
+  "description": "Refuses force pushes, and says so in the result."
+}</code></pre>
+
+<p class="code-label">my-guardrail/hooks/hooks.json</p>
+<pre><code>{ "modules": ["./guardrail.js"] }</code></pre>
+
+<p class="code-label">my-guardrail/hooks/guardrail.js</p>
+<pre><code>export function register(on) {
+  on("tool.call", { tool: "Bash" }, async ($, e, next) => {
+    const command = e.command ?? "";
+
+    // Answer for ourselves: never call next, so the engine never runs it.
+    if (/git\s+push\b.*(--force|-f)\b/.test(command)) {
+      return {
+        output: "Refused by my-guardrail: force push. Use --force-with-lease.",
+        isError: true,
+      };
+    }
+
+    // Wrap: hold the result, annotate it, hand it back up.
+    const result = await next(e);
+    if (/git\s+push\b/.test(command)) {
+      $.store.set("last-push", new Date().toISOString());
+    }
+    return result;
+  });
+}</code></pre>
+
+<p>Note what the single function does that two shell hooks could not: it decides
+on the input <em>and</em> records something about the result, sharing the
+<code>command</code> variable across both moments.</p>
+
+<div class="callout callout--warn">
+<h4>The one thing in this file I could not verify</h4>
+<p>The field names on <code>e</code> for <code>tool.call</code>
+(<code>e.command</code>) and the shape of the object you return
+(<code>output</code>, <code>isError</code>) are my best reading, not a checked
+fact. The engine's own types are the authority and they move between releases.
+Confirming them is step 3 of the exercise below, and treating a plausible-looking
+field name as true is the main way people lose an afternoon here.</p>
+</div>
+
+<h2>Run it</h2>
+
+<pre><code># The feature is default-off in 2.1.272. Turn it on for this session only.
+CLAUDE_CODE_ENABLE_FUNCTION_HOOKS=1 claude --plugin-dir ./my-guardrail --debug</code></pre>
+
+<p>The folder is watched. Save the file and the module reloads, <code>register</code>
+runs again in a fresh environment, and timers from the old one are dropped. You
+do not restart Claude Code to iterate.</p>
+
+<p>When a hook fails it is <strong>skipped and the chain continues without it</strong>.
+You get one dim line naming the plugin, the event and the reason. A mod that
+appears to do nothing has almost always been told why, in the debug log. Before
+you even start a session, <code>claude plugin validate ./my-guardrail</code>
+reports what the engine thinks your module hooks and calls.</p>
+
+<h2>Your exercise</h2>
+
+<ol>
+<li>Build the three files above.</li>
+<li>Load it with the command above and try <code>git push --force</code> on a scratch repo. Confirm the refusal text appears and the push never happens.</li>
+<li>Run <code>/plugin-types</code> in that session. It writes <code>claude-code.d.ts</code> into <code>.claude/types</code>. Open it, find the <code>tool.call</code> event, and <strong>correct my guesses</strong> about <code>e.command</code> and the return shape.</li>
+<li>Add one thing the shell version could not do: use the result you got back from <code>next(e)</code> to change what the model is told.</li>
+</ol>
+
+<div class="quiz">
+  <p class="quiz__lede">Recall</p>
+
+  <p class="quiz__q" id="q1">A hook returns without ever calling <code>next</code>. What happens?</p>
+  <ul class="quiz__opts" aria-labelledby="q1">
+    <li><button type="button" class="quiz__opt" data-correct>It answers for itself and the engine never runs</button></li>
+    <li><button type="button" class="quiz__opt">It answers for itself but the engine still runs</button></li>
+    <li><button type="button" class="quiz__opt">It defers to others and the engine still runs</button></li>
+  </ul>
+  <div class="quiz__why" hidden>
+    <p>Not calling <code>next</code> short-circuits the chain. The other plugins
+    below you and the engine's own behaviour never happen. This is the deny
+    path, and it is why a function hook can refuse something before it occurs
+    rather than after.</p>
+  </div>
+
+  <p class="quiz__q" id="q2">Where do an event's exact field names come from?</p>
+  <ul class="quiz__opts" aria-labelledby="q2">
+    <li><button type="button" class="quiz__opt" data-correct>The types that plugin-types writes from your build</button></li>
+    <li><button type="button" class="quiz__opt">The pages that code.claude.com keeps for your build</button></li>
+    <li><button type="button" class="quiz__opt">The notes that plugin-authoring ships with your build</button></li>
+  </ul>
+  <div class="quiz__why" hidden>
+    <p><code>/plugin-types</code> generates the declarations from the build you
+    are running, which matters because the API is provisional. There is no
+    published event reference, and the bundled skill describes the contract
+    without listing field names. Regenerate after every update rather than
+    editing the file.</p>
+  </div>
+
+  <p class="quiz__q" id="q3">Your mod needs to read a file on disk. What does it use?</p>
+  <ul class="quiz__opts" aria-labelledby="q3">
+    <li><button type="button" class="quiz__opt" data-correct>The filesystem noun hanging off of the engine interface</button></li>
+    <li><button type="button" class="quiz__opt">The standard require call for the node builtin module</button></li>
+    <li><button type="button" class="quiz__opt">The standard import line for the node builtin module</button></li>
+  </ul>
+  <div class="quiz__why" hidden>
+    <p>The module runs in an environment with no DOM and no Node, so
+    <code>fs</code> is not reachable by any spelling. Everything outside the
+    module comes through <code>$</code>. That single chokepoint is also the
+    answer to your security question: because every capability is a noun on one
+    object, capabilities can be withheld from a mod you do not fully trust.</p>
+  </div>
+</div>
+
+<h2>Read this next</h2>
+
+<p>The <strong>bundled <code>plugin-authoring</code> skill</strong>, which ships
+inside Claude Code and appears in your skill list once function hooks are
+enabled. It is the most authoritative prose on this subject that exists right
+now, because there is no documentation page for mods yet. Read the section on
+<code>ui.render</code> even though this lesson did not cover drawing; it will
+make lesson 0002 land faster.</p>
+
+<div class="callout">
+<p>Anything unclear, or a guess of mine that turned out wrong when you ran
+<code>/plugin-types</code>? Tell me in the session. Correcting a wrong model
+now is worth more than the lesson itself, and I would rather record the
+correction than have you carry it into the next mod.</p>
+</div>
+
+<footer class="colophon">
+  <p>Lesson 0001 &middot; Facts checked against Claude Code 2.1.272 on this
+  machine and the bundled <code>plugin-authoring</code> skill. The feature is
+  pre-release and the API is provisional; expect drift.</p>
+  <p>Set in Newsreader and Figtree, free stand-ins for Anthropic's bespoke
+  Serif and Sans, which are not licensable.</p>
+</footer>
+
+</main>
+<script src="../assets/quiz.js"></script>
+</body>
+</html>

@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Function hooks &middot; Quick reference</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:ital,wght@0,300..900;1,300..900&family=Newsreader:ital,opsz,wght@0,6..72,200..800;1,6..72,200..800&family=JetBrains+Mono:ital,wght@0,400..700;1,400..700&display=swap">
+<link rel="stylesheet" href="../assets/claude.css">
+</head>
+<body>
+<main class="wrap">
+
+<header class="masthead">
+  <span class="lesson-no">Reference</span>
+  <span class="spacer"></span>
+  <nav>
+    <a href="../lessons/0001-wrapping-not-reacting.html">Lesson 0001</a>
+    <a href="../RESOURCES.md">Resources</a>
+  </nav>
+</header>
+
+<h1>Function hooks</h1>
+
+<p class="standfirst">Claude Code mods, compressed. Everything marked
+<span class="tag tag--verified">verified</span> was read out of the binary or
+the bundled <code>plugin-authoring</code> skill on this machine at version
+2.1.272. Everything marked <span class="tag tag--unverified">unverified</span>
+is secondhand and needs checking against <code>/plugin-types</code> before you
+rely on it.</p>
+
+<h2>Turn it on</h2>
+
+<pre><code># Default-off in 2.1.272. Session-scoped.
+CLAUDE_CODE_ENABLE_FUNCTION_HOOKS=1 claude
+
+# Load a plugin from disk for this session; folder is watched, saves hot-reload.
+claude --plugin-dir ./my-mod          # repeatable
+claude --plugin-url https://...zip    # fetch a .zip for this session
+
+claude --debug                        # every skipped hook and refused result
+claude plugin validate ./my-mod       # what the engine thinks you hooked
+/plugin-types                         # writes .claude/types/*.d.ts THE REFERENCE</code></pre>
+
+<h2>Layout</h2>
+
+<pre><code>my-mod/
+├── .claude-plugin/
+│   └── plugin.json     name, version, description
+│                       "types": "./types/index.d.ts"  if you extend $
+│                       "userConfig": {...}            becomes `options`
+└── hooks/
+    ├── hooks.json      { "modules": ["./mod.js"] }   ONE path, relative
+    └── mod.js          TypeScript or JavaScript, exports register</code></pre>
+
+<h2>The shape</h2>
+
+<pre><code>export function register(on, options) {
+  on(event, matcher?, hook)
+}
+
+async ($, e, next) => {
+  // $     engine interface, the only way out of the module
+  // e     event input, a plain value
+  // next  the rest of the chain, then the engine itself
+
+  return await next(e)            // pass through
+  return await next({ ...e, x })  // rewrite what everyone below sees
+  return { ... }                  // answer alone; engine never runs
+}</code></pre>
+
+<p><strong>No DOM, no Node.</strong> No <code>fs</code>, no <code>require</code>,
+no <code>process</code> global. JSX is available with <code>h</code> as the
+factory. A failing hook is skipped and the chain continues without it, unless
+its registration's <code>.catch</code> answers in its place.</p>
+
+<h2>Events</h2>
+
+<p><span class="tag tag--verified">verified</span> Extracted from the 2.1.272
+binary. Not exhaustive, and inputs are <em>not</em> documented here on purpose:
+get them from <code>/plugin-types</code>.</p>
+
+<div class="table-scroll">
+<table>
+<thead><tr><th>Namespace</th><th>Events</th></tr></thead>
+<tbody>
+<tr><td><code>session</code></td><td><code>start</code> <code>authorize</code> <code>compact</code> <code>receive</code> <code>attach</code> <code>detach</code> <code>refresh</code> <code>error</code></td></tr>
+<tr><td><code>turn</code></td><td><code>start</code> <code>step</code> <code>complete</code> <code>abort</code></td></tr>
+<tr><td><code>tool</code></td><td><code>call</code> <code>check</code> <code>describe</code> <code>output</code> <code>list</code> <code>register</code> <code>execution</code></td></tr>
+<tr><td><code>ui</code></td><td><code>render</code> <code>resolve</code> <code>ask</code> <code>input</code> <code>notice</code> <code>message</code> <code>log</code> <code>open</code> <code>close</code> <code>blit</code> <code>invalidate</code></td></tr>
+<tr><td><code>prompt</code></td><td><code>submit</code> <code>context</code> <code>fill</code> <code>section</code> <code>suggest</code></td></tr>
+<tr><td><code>model</code></td><td><code>complete</code> <code>classify</code> <code>fork</code></td></tr>
+<tr><td><code>command</code></td><td><code>run</code> <code>list</code> <code>register</code> <code>describe</code></td></tr>
+<tr><td>other</td><td><code>subagent.spawn</code> <code>flag.value</code></td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="callout">
+<h4><code>turn.step</code> is the odd one</h4>
+<p>It streams, so its hook is an async generator, the only form that loads
+there:</p>
+<pre><code>async function* ($, e, next) {
+  yield* next(e)        // forward the stream, evaluates to the step result
+  for await (const chunk of next(e)) { yield chunk }   // rewrite chunk by chunk
+}</code></pre>
+<p>A chunk once yielded stays. A hook that fails mid-stream is left where it
+stood and the rest of the response comes from beneath it.</p>
+</div>
+
+<h2>Drawing</h2>
+
+<p><span class="tag tag--verified">verified</span> Four mount points:</p>
+
+<div class="table-scroll">
+<table>
+<thead><tr><th>Site</th><th>Notes</th></tr></thead>
+<tbody>
+<tr><td><code>StatusLine</code></td><td>The status row.</td></tr>
+<tr><td><code>AbovePrompt</code></td><td>Size to <code>e.props.bodyColumns</code>, not the viewport.</td></tr>
+<tr><td><code>Pane</code></td><td>Same sizing rule. With <code>focus</code>, <code>closeOnEscape</code>, <code>holdToasts</code> it behaves as a dialog.</td></tr>
+<tr><td><code>PromptHintSite</code></td><td>Hint text by the prompt.</td></tr>
+</tbody>
+</table>
+</div>
+
+<pre><code>on("ui.render", { component: "AbovePrompt" }, async ($, e, next) => {
+  const t = await $.ui.resolve(e)   // per-surface element constructors
+  return &lt;t.Box&gt;&lt;t.Text&gt;hello&lt;/t.Text&gt;&lt;/t.Box&gt;
+})</code></pre>
+
+<p><code>e.surface</code> is <code>terminal</code>, <code>desktop</code> or
+<code>mobile</code>, and the element table differs per surface: mobile has no
+<code>Input</code>, <code>Select</code> or <code>Client</code>; terminal has no
+<code>Svg</code> but alone has <code>Raster</code>. A grid of coloured cells is
+one <code>Raster</code>, never a <code>Box</code> per cell.</p>
+
+<p>Trees are <strong>validated</strong> against an element allowlist, a per-prop
+allowlist and size budgets. An invalid tree is silently not drawn; the engine
+draws its own and writes to the debug log:</p>
+
+<pre><code>ui.render (&lt;Component&gt;): a hook returned a tree that does not validate</code></pre>
+
+<p>When a drawing silently falls back, that line and the element's props type
+are the only two things worth reading.</p>
+
+<h2>Beyond one dispatch</h2>
+
+<p>A hook runs inside one dispatch with a budget. <code>next.signal</code> aborts
+when that dispatch is abandoned, and anything started for it should stop on it.
+Work that must outlive a dispatch starts in <code>session.start</code>, which
+fires once and is awaited before the first prompt.</p>
+
+<div class="table-scroll">
+<table>
+<thead><tr><th>Need</th><th>Reach for</th></tr></thead>
+<tbody>
+<tr><td>Keep values across sessions</td><td><code>$.store.get</code> <code>set</code> <code>delete</code> <code>keys</code> <span class="tag tag--verified">verified</span></td></tr>
+<tr><td>Keep running</td><td><code>$.clock.every</code> <code>$.clock.after</code>, until cancelled or the module reloads</td></tr>
+<tr><td>Wake a quiet session</td><td><code>$.prompt.submit</code>, hands the session a prompt once idle</td></tr>
+<tr><td>Show state without a turn</td><td><code>$.ui.status</code> <code>$.ui.toast</code> <code>$.ui.log</code></td></tr>
+<tr><td>Run a host command</td><td><code>$.process.run</code>, by argv</td></tr>
+<tr><td>Redraw after your own state changed</td><td><code>$.ui.invalidate</code></td></tr>
+</tbody>
+</table>
+</div>
+
+<h2>Giving the model a tool</h2>
+
+<pre><code>// in a session.start hook, so it is listed by turn one
+await $.tool.register({ name, description, inputSchema })
+// listed to the model as mcp__&lt;plugin&gt;__&lt;name&gt;
+
+on("tool.call", { tool: "mcp__my-mod__thing" }, async ($, e, next) => { ... })
+// a call no hook answers fails saying so</code></pre>
+
+<h2>Extending <code>$</code></h2>
+
+<p>This is the composability story and the reason mods are more than hooks. A
+plugin can add a noun to <code>$</code> in <code>engine.create</code> and ship
+its types as a contract: one self-contained <code>.d.ts</code> that exports the
+noun's types and declares it on the engine interface.</p>
+
+<pre><code>export type Topo = { ... }
+declare module 'claude-code' {
+  interface EngineInterface { topo: Topo }
+}
+// named in plugin.json as "types": "./types/index.d.ts"</code></pre>
+
+<p>A dependent plugin never copies that file. <code>/plugin-types</code> collects
+every enabled plugin's contract into <code>claude-code-plugins/</code> beside an
+index, so the noun is typed on the dependent's <code>$</code> automatically.</p>
+
+<h2>Versus what you already use</h2>
+
+<div class="table-scroll">
+<table>
+<thead><tr><th>Surface</th><th>Relationship to the operation</th><th>Reach for it when</th></tr></thead>
+<tbody>
+<tr><td>Shell hooks</td><td>Reacts after the fact, out of process</td><td>A side effect is all you need, and any language will do.</td></tr>
+<tr><td>Function hooks</td><td>Wraps it, in process, owns input and result</td><td>You must rewrite input, inspect the result, deny before it happens, or draw.</td></tr>
+<tr><td>Skills</td><td>Instructions loaded into the turn</td><td>You are shaping what the model does, not what the engine does.</td></tr>
+<tr><td>MCP servers</td><td>A separate process offering tools</td><td>You are connecting to something outside, in any language.</td></tr>
+<tr><td>Plugins</td><td>The packaging around all of the above</td><td>Always. A mod ships as one.</td></tr>
+</tbody>
+</table>
+</div>
+
+<h2>Still unverified</h2>
+
+<p><span class="tag tag--unverified">unverified</span> Carried from secondhand
+sources and not confirmed on this machine. Do not build on these without
+checking.</p>
+
+<ul>
+<li>The exact input fields of any event, including <code>tool.call</code>'s.</li>
+<li>The shape a <code>tool.call</code> hook returns to deny a call.</li>
+<li>How an administrator actually withholds a noun on <code>$</code> from an installed third-party mod. The mechanism is described in the proposal, not in reference documentation, and it is the load-bearing question for shipping mods to a team.</li>
+<li>Ship date, marketplace, and whether an organisation can pin or block a mod.</li>
+</ul>
+
+<footer class="colophon">
+  <p>Checked against Claude Code 2.1.272. Pre-release API; regenerate
+  <code>/plugin-types</code> after every update rather than trusting this page.</p>
+</footer>
+
+</main>
+</body>
+</html>
