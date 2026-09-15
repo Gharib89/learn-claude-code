@@ -48,7 +48,7 @@
   --r-sm:.25rem; --r-md:.5rem; --r-lg:1rem; --r-pill:100vw; --hairline:.0625rem;
   --shadow-card:0 2px 2px #00000003, 0 4px 4px #00000005, 0 16px 24px #0000000a;
 
-  --measure:40rem; --container:56.25rem;
+  --measure:44rem; --container:60rem;
   --page-margin:clamp(1.5rem, 1.08rem + 3.92vw, 4rem);
 }
 
@@ -90,8 +90,8 @@ html{color-scheme:light dark}
 body{
   margin:0; background:var(--bg); color:var(--fg);
   font-family:var(--font-serif);
-  font-size:1.125rem; font-weight:400; line-height:1.6;
-  font-variation-settings:"opsz" 18;
+  font-size:1.25rem; font-weight:400; line-height:1.6;
+  font-variation-settings:"opsz" 20;
   -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;
 }
 ::selection{background:var(--selection)}
@@ -102,13 +102,13 @@ img{max-width:100%}
 .wrap > .bleed{max-width:none}
 
 h1,h2,h3,h4{font-family:var(--font-serif);color:var(--fg);text-wrap:balance;margin:0}
-h1{font-size:clamp(2.25rem,1.9rem+1.6vw,3.25rem);font-weight:330;line-height:1.12;
+h1{font-size:clamp(2.5rem,2.05rem+1.9vw,3.75rem);font-weight:330;line-height:1.12;
    font-variation-settings:"opsz" 60;letter-spacing:-.022em}
-h2{font-size:1.75rem;font-weight:500;line-height:1.3;font-variation-settings:"opsz" 36;
+h2{font-size:2rem;font-weight:500;line-height:1.3;font-variation-settings:"opsz" 36;
    margin:3.5rem 0 1rem}
-h3{font-size:1.3125rem;font-weight:500;line-height:1.35;font-variation-settings:"opsz" 28;
+h3{font-size:1.5rem;font-weight:500;line-height:1.35;font-variation-settings:"opsz" 28;
    margin:2.25rem 0 .5rem}
-h4{font-family:var(--font-sans);font-size:.9375rem;font-weight:600;line-height:1.4;
+h4{font-family:var(--font-sans);font-size:1.0625rem;font-weight:600;line-height:1.4;
    margin:1.75rem 0 .5rem}
 p{margin:0 0 1.25rem}
 ul,ol{margin:0 0 1.25rem;padding-left:1.4rem}
@@ -124,19 +124,19 @@ a:hover{color:var(--clay-emphasis)}
 /* UI chrome is the sans. claude.ai's .font-base is 14px / 1.4 / weight 430. */
 .ui,button,label,th,td,figcaption,.eyebrow,.meta,.tag{
   font-family:var(--font-sans);font-weight:430;line-height:1.45}
-.meta{font-size:.875rem;color:var(--fg-tertiary)}
+.meta{font-size:.9375rem;color:var(--fg-tertiary)}
 
 /* ── Masthead ───────────────────────────────────────────────────────────── */
 .masthead{border-bottom:var(--hairline) solid var(--border-faint);padding-bottom:1.25rem;
   margin-bottom:2.5rem;display:flex;flex-wrap:wrap;gap:.75rem 1.25rem;align-items:baseline}
-.masthead .lesson-no{font-family:var(--font-mono);font-size:.8125rem;color:var(--clay-emphasis);
+.masthead .lesson-no{font-family:var(--font-mono);font-size:.9375rem;color:var(--clay-emphasis);
   font-weight:500;letter-spacing:.04em}
 .masthead .spacer{flex:1}
-.masthead nav{font-family:var(--font-sans);font-size:.8125rem;display:flex;gap:1rem}
+.masthead nav{font-family:var(--font-sans);font-size:.9375rem;display:flex;gap:1rem}
 .masthead nav a{color:var(--fg-tertiary);font-weight:430;text-decoration:none}
 .masthead nav a:hover{color:var(--fg);text-decoration:underline}
 
-.standfirst{font-size:1.3125rem;line-height:1.5;color:var(--fg-secondary);
+.standfirst{font-size:1.4375rem;line-height:1.5;color:var(--fg-secondary);
   font-variation-settings:"opsz" 28;margin:0 0 2.5rem}
 
 /* ── Code ───────────────────────────────────────────────────────────────── */
@@ -146,11 +146,11 @@ a:hover{color:var(--clay-emphasis)}
   border:.5px solid color-mix(in srgb, var(--border-strong) 22%, transparent);
   border-radius:.3rem;padding:1px 4px;white-space:pre-wrap}
 
-pre{font-family:var(--font-mono);font-size:.8125rem;line-height:1.6;
+pre{font-family:var(--font-mono);font-size:.9375rem;line-height:1.6;
   background:var(--bg-card);border:var(--hairline) solid var(--border-faint);
   border-radius:var(--r-md);padding:1.15rem 1.25rem;overflow-x:auto;margin:0 0 1.5rem}
 pre code{color:var(--fg);background:none;border:0;padding:0;font-size:inherit}
-.code-label{font-family:var(--font-mono);font-size:.75rem;color:var(--fg-tertiary);
+.code-label{font-family:var(--font-mono);font-size:.8125rem;color:var(--fg-tertiary);
   margin-bottom:.4rem;display:block}
 
 /* ── The wrap diagram: the one loud element on the page ─────────────────── */
@@ -159,7 +159,7 @@ pre code{color:var(--fg);background:none;border:0;padding:0;font-size:inherit}
 .shape{border:var(--hairline) solid var(--border-faint);border-radius:var(--r-lg);
   padding:1.5rem;background:var(--bg-card)}
 .shape h4{margin-top:0}
-.shape pre{background:transparent;border:0;padding:0;margin:0;font-size:.75rem;
+.shape pre{background:transparent;border:0;padding:0;margin:0;font-size:.875rem;
   line-height:1.5;color:var(--fg-secondary);overflow-x:auto}
 .shape--wrap{border-color:var(--clay);border-width:1.5px}
 
@@ -175,21 +175,21 @@ blockquote{margin:2rem 0;padding-left:1.25rem;border-left:2px solid var(--clay);
 
 /* ── Tables ─────────────────────────────────────────────────────────────── */
 .table-scroll{overflow-x:auto;margin:0 0 1.5rem}
-table{border-collapse:collapse;width:100%;font-family:var(--font-sans);font-size:.8125rem}
+table{border-collapse:collapse;width:100%;font-family:var(--font-sans);font-size:.9375rem}
 th,td{border:var(--hairline) solid var(--border-faint);padding:.5rem .75rem;
   text-align:left;vertical-align:top}
 th{font-weight:500;color:var(--fg-secondary);background:var(--bg-secondary)}
 td code{font-size:.9em}
 
 /* ── Source badges: verified vs secondhand ──────────────────────────────── */
-.tag{display:inline-block;font-size:.6875rem;font-weight:500;letter-spacing:.02em;
+.tag{display:inline-block;font-size:.75rem;font-weight:500;letter-spacing:.02em;
   padding:.1rem .45rem;border-radius:var(--r-pill);border:var(--hairline) solid;
   vertical-align:.08em}
 .tag--verified{color:var(--ok);background:var(--ok-bg);border-color:currentColor}
 .tag--unverified{color:var(--no);background:var(--no-bg);border-color:currentColor}
 
 /* ── Buttons ────────────────────────────────────────────────────────────── */
-.btn{font-family:var(--font-sans);font-size:.875rem;font-weight:500;
+.btn{font-family:var(--font-sans);font-size:.9375rem;font-weight:500;
   background:var(--btn-bg);color:var(--btn-fg);border:0;border-radius:var(--r-pill);
   padding:.5rem 1.1rem;cursor:pointer}
 .btn:hover{background:var(--btn-bg-hover)}
@@ -197,20 +197,20 @@ td code{font-size:.9em}
 /* ── Footer ─────────────────────────────────────────────────────────────── */
 .colophon{margin-top:4rem;padding-top:1.5rem;
   border-top:var(--hairline) solid var(--border-faint);
-  font-family:var(--font-sans);font-size:.8125rem;color:var(--fg-tertiary)}
+  font-family:var(--font-sans);font-size:.9375rem;color:var(--fg-tertiary)}
 .colophon a{color:var(--fg-secondary)}
 
 /* ── Print ──────────────────────────────────────────────────────────────── */
 @media print {
   :root{--bg:#fff;--bg-card:#fff;--bg-secondary:#f5f4ed;--fg:#141413;
         --fg-secondary:#3d3d3a;--fg-tertiary:#5e5d59;--border-faint:#d1cfc5}
-  body{font-size:10.5pt;line-height:1.45}
+  body{font-size:11.5pt;line-height:1.45}
   .wrap{padding:0;max-width:none}
   .wrap > *{max-width:none}
   .masthead nav,.btn,.quiz__check,.quiz__reset{display:none}
   h2,h3{break-after:avoid}
   pre,.shape,.callout,.quiz{break-inside:avoid}
-  pre{font-size:8pt;white-space:pre-wrap;word-wrap:break-word}
+  pre{font-size:9pt;white-space:pre-wrap;word-wrap:break-word}
   a{text-decoration:none}
   a[href^="http"]::after{content:" (" attr(href) ")";font-size:8pt;color:#5e5d59;
     word-break:break-all}
