@@ -2,8 +2,13 @@ export function register(on) {
   on("tool.call", { tool: "Bash" }, async ($, e, next) => {
     const command = e.command ?? "";
 
+    // --force and -f as whole arguments. --force-with-lease is deliberately
+    // exempt: it is what the refusal tells you to use, and a plain /--force\b/
+    // matches it too, which would make that advice impossible to follow.
+    const forcePush = /\bgit\s+push\b.*?(?:\s--force(?!-with-lease)|\s-f)\b/;
+
     // Answer for ourselves: never call next, so the engine never runs it.
-    if (/git\s+push\b.*(--force|-f)\b/.test(command)) {
+    if (forcePush.test(command)) {
       return { deny: "Refused by my-guardrail: force push. Use --force-with-lease." };
     }
 

@@ -157,8 +157,13 @@ never read.</p>
   on("tool.call", { tool: "Bash" }, async ($, e, next) => {
     const command = e.command ?? "";
 
+    // --force and -f as whole arguments. --force-with-lease is deliberately
+    // exempt: it is what the refusal tells you to use, and a plain /--force\b/
+    // matches it too, which would make that advice impossible to follow.
+    const forcePush = /\bgit\s+push\b.*?(?:\s--force(?!-with-lease)|\s-f)\b/;
+
     // Answer for ourselves: never call next, so the engine never runs it.
-    if (/git\s+push\b.*(--force|-f)\b/.test(command)) {
+    if (forcePush.test(command)) {
       return { deny: "Refused by my-guardrail: force push. Use --force-with-lease." };
     }
 
@@ -174,6 +179,17 @@ never read.</p>
 <p>Note what the single function does that two shell hooks could not: it decides
 on the input <em>and</em> records something about the result, sharing the
 <code>command</code> variable across both moments.</p>
+
+<div class="callout">
+<h4>The lookahead is not fussiness</h4>
+<p>The obvious matcher, <code>/--force\b/</code>, also matches
+<code>--force-with-lease</code>, because <code>\b</code> sits happily between
+the <code>e</code> and the hyphen. Write it that way and the guardrail blocks
+the one thing its own refusal tells you to do instead, leaving no way to push a
+rewritten branch at all. The bug is invisible until someone takes your advice.
+<strong>A deny message is a promise that the path it names is open.</strong>
+Test the remedy, not just the thing you meant to block.</p>
+</div>
 
 <h2>What <code>e</code> is, and what you return</h2>
 
@@ -254,7 +270,7 @@ you.</p>
 
 <ol>
 <li>Build the three files above, in that layout, and run <code>claude plugin validate ./my-guardrail</code> until it prints the <code>Validating hooks:</code> block.</li>
-<li>Load it with the command above and try <code>git push --force</code> on a scratch repo. Confirm the refusal text appears and the push never happens.</li>
+<li>Load it with the command above and try <code>git push --force</code> on a scratch repo. Confirm the refusal text appears and the remote ref does not move. Then run <code>git push --force-with-lease</code> and confirm it <em>is</em> allowed through, which is the half that is easy to forget to check.</li>
 <li>Run <code>/plugin-types</code> in that session and open <code>.claude/types/claude-code.d.ts</code>. Find <code>ToolCallResult</code> and read the third variant, the one carrying <code>isError</code>. Work out from the doc comments why a hook cannot return it.</li>
 <li>Add one thing the shell version could not do: use the result you got back from <code>next(e)</code> to change what the model is told.</li>
 </ol>
