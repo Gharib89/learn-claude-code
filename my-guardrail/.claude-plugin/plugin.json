@@ -1,0 +1,5 @@
+{
+  "name": "my-guardrail",
+  "version": "0.1.0",
+  "description": "Refuses force pushes, and says so in the result."
+}

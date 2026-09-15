@@ -130,6 +130,18 @@ loud because they are the mental model:</p>
 <p>You already block force pushes with a shell hook. Here is the same guardrail
 as a function hook, which is a deliberately small delta from what you know.</p>
 
+<p>Three files, and the layout is load-bearing. <code>hooks/</code> sits
+<em>beside</em> <code>.claude-plugin/</code>, not inside it. Put it inside and
+the manifest still validates, the plugin still loads, and your module is simply
+never read.</p>
+
+<pre><code>my-guardrail/
+  .claude-plugin/
+    plugin.json
+  hooks/
+    hooks.json
+    guardrail.js</code></pre>
+
 <p class="code-label">my-guardrail/.claude-plugin/plugin.json</p>
 <pre><code>{
   "name": "my-guardrail",
@@ -191,10 +203,26 @@ appears to do nothing has almost always been told why, in the debug log. Before
 you even start a session, <code>claude plugin validate ./my-guardrail</code>
 reports what the engine thinks your module hooks and calls.</p>
 
+<div class="callout callout--warn">
+<p><strong>A pass is not proof.</strong> <code>validate</code> checks the
+manifest first and the hooks second, and it reports success on the manifest
+alone. If your module is misplaced, you get a green tick and nothing else. What
+you are looking for is the second block:</p>
+<pre><code>Validating hooks: .../my-guardrail/hooks/hooks.json
+
+  &#x276f; ./guardrail.js hooks: tool.call{tool=Bash}
+  &#x276f; ./guardrail.js calls: $.store.set</code></pre>
+<p>No <code>Validating hooks:</code> line means no hooks. The same goes for
+loading: <code>--plugin-dir</code> takes a path relative to your working
+directory, and a path that does not exist is a <code>[WARN]</code> in the debug
+log, not an error on screen. Session starts, nothing is hooked, nothing tells
+you.</p>
+</div>
+
 <h2>Your exercise</h2>
 
 <ol>
-<li>Build the three files above.</li>
+<li>Build the three files above, in that layout, and run <code>claude plugin validate ./my-guardrail</code> until it prints the <code>Validating hooks:</code> block.</li>
 <li>Load it with the command above and try <code>git push --force</code> on a scratch repo. Confirm the refusal text appears and the push never happens.</li>
 <li>Run <code>/plugin-types</code> in that session. It writes <code>claude-code.d.ts</code> into <code>.claude/types</code>. Open it, find the <code>tool.call</code> event, and <strong>correct my guesses</strong> about <code>e.command</code> and the return shape.</li>
 <li>Add one thing the shell version could not do: use the result you got back from <code>next(e)</code> to change what the model is told.</li>
