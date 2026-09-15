@@ -54,6 +54,19 @@ claude plugin validate ./my-mod       # what the engine thinks you hooked
     ├── hooks.json      { "modules": ["./mod.js"] }   ONE path, relative
     └── mod.js          TypeScript or JavaScript, exports register</code></pre>
 
+<p><span class="tag tag--verified">verified</span> <code>hooks/</code> is a
+sibling of <code>.claude-plugin/</code>, never a child of it. Both failure modes
+here are silent: nesting <code>hooks/</code> inside <code>.claude-plugin/</code>
+still passes <code>claude plugin validate</code>, which reports success on the
+manifest alone, and a <code>--plugin-dir</code> path that does not exist is a
+<code>[WARN] Plugin path does not exist</code> line in the debug log with nothing
+on screen. Read validate's output for a second block naming your module:</p>
+
+<pre><code>Validating hooks: .../my-mod/hooks/hooks.json
+
+  &#x276f; ./mod.js hooks: tool.call{tool=Bash}
+  &#x276f; ./mod.js calls: $.store.set</code></pre>
+
 <h2>The shape</h2>
 
 <pre><code>export function register(on, options) {
