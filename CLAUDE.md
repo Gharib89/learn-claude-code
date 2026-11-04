@@ -46,6 +46,26 @@ is the source of truth; the artifact is a publish target.
 
 `NOTES.md` holds the teaching preferences and the list of published lessons.
 
+### Verifying an exercise
+
+A lesson's exercise is not done until a real, driven Claude session has run it
+end to end; careful authoring and static review are not proof. Drive it in a
+Herdr tab with `CLAUDE_CODE_ENABLE_FUNCTION_HOOKS=1` (`herdr tab create --env`,
+`herdr agent start --kind claude -- --plugin-dir ./<plugin> --debug`,
+`herdr agent prompt --wait`, `herdr agent read --source recent-unwrapped`).
+Tell the driven agent to write only in a throwaway folder, to report verbatim
+output and explicit yes/no answers rather than a summary, and to test the remedy
+a deny message names as well as the blocked call. Follow up its unprompted
+caveats.
+
+Why: lesson 0001's exercise failed on the owner's first try, and its three bugs
+showed up only at runtime: `hooks/` nested inside `.claude-plugin/` loads
+silently and hooks nothing (7b276a2), returning `{ output, isError }` instead of
+`{ deny }` skips the hook and lets the call through unguarded (766c2c8), and
+`/--force\b/` matched `--force-with-lease`, so the deny message recommended a
+command the same hook blocked (01b5938, found from one of the driven agent's
+caveats).
+
 ## Facts about Claude Code mods
 
 Mods are pre-release, undocumented and default-off behind
